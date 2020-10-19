@@ -1,135 +1,94 @@
 [![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod-redirect-0.herokuapp.com/)
 
-# Exercices en vrac (chapitre 7.1)
+# Notes et accords (chapitre 7.2)
 
 Avant de commencer. Consulter les instructions à suivre dans [instructions.md](instructions.md)
 
-À moins d'indications contraires, vous devez retourner les résultats des fonctions, pas les afficher directement. Vous devez, pour chaque exercice, choisir les paramètres appropriés.
+À moins d'indications contraires, vous devez retourner les résultats des fonctions, pas les afficher directement.
 
-## 1. Nombres de Fibonacci (nombre unique)
-### `get_fibonacci_number`
+## Standard MIDI
 
-Écrivez une fonction qui calculent le nombre de Fibonacci pour un index donné (index partent à 0). La définition récursive de la suite de Fibonacci est :
+Dans cette série d'exercices, nous utiliserons un clavier MIDI virtuel nous permettant de produire des notes musicales et la [librairie Mido](https://mido.readthedocs.io/en/latest/) en Python. Elle ne fait pas partie de la libraire standard de Python, il faut donc l'installer (soit avec `pip` ou à travers votre IDE). Pour nos besoin, disons seulement le standard MIDI est un système de messages permettant de savoir quelles notes du clavier sont appuyées et relâchées. La librairie Mido nous permet d'obtenir ces messages dans un code Python et d'effectuer des actions sur ceux-ci.
 
-*F*<sub>0</sub> = 0 <br>
-*F*<sub>1</sub> = 1 <br>
-*F*<sub>*i*</sub> = *F*<sub>*i* - 1</sub> + *F*<sub>*i* - 2</sub>
+## 1. Associations entre numéro MIDI et nom de notes
+### `build_note_dictionaries`
 
-Faites le tout en une seule instruction `return` (donc nécessairement de façon récursive)
+Écrivez une fonction qui générère deux dictionnaires : un qui associe chaque numéro MIDI pertinent à un nom de note ("Do", "Ré", "C", "D", etc.) et un qui fait l'inverse. la fonction prend en paramètre le nom de chaque 12 notes de l'octave partant sur do. Le deuxième paramètre indique si les noms de notes doivent être suivis du numéro de l'octave (par exemple "C4" ou "C" pour le *middle C*).
 
 Exemple :
 ```python
-print([get_fibonacci_number(0), get_fibonacci_number(1), get_fibonacci_number(2)])
-print([get_fibonacci_number(i) for i in range(10)])
+english_names = ["C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"]
+solfeggio_names = ["Do", "Réb", "Ré", "Mib", "Mi", "Fa", "Fa#", "Sol", "Lab", "La", "Sib", "Si"]
+midi_to_name_eng_8va, name_to_midi_eng_8va = build_note_dictionaries(english_names, True)
+midi_to_name_fr, name_to_midi_fr = build_note_dictionaries(solfeggio_names, False)
+print(midi_to_name_eng_8va[64])
+print(name_to_midi_eng_8va["C0"])
+print(midi_to_name_fr[61])
+print(midi_to_name_fr[73])
+print(name_to_midi_fr["Fa#"])
 ```
 Résultat :
 ```
-[0, 1, 1]
-[0, 1, 1, 2, 3, 5, 8, 13, 21, 34]
+E4
+12
+Réb
+Réb
+6
 ```
 
-## 2. Nombres de Fibonacci (séquence entière)
-### `get_fibonacci_sequence`
+## 2. Afficher le nom des notes jouées
+### `build_print_note_name_callback`
 
-Écrivez une fonction qui retourne la séquence de Fibonacci d'une taille donnée (donc taille 2 veut dire 2 éléments). Faites le tout en une seule instruction `return` (donc nécessairement de façon récursive). N'utilisez pas la fonction du numéro 1 pour générer les nombres
+Écrivez une fonction qui retourne une fonction qui sert de fonction de rappel (*callback*) et qui affiche le nom des notes qui sont jouées. On affiche seulement quand la note est appuyée, pas relâchée. On passe en paramètre à `build_print_note_name_callback` le dictionnaire d'associations de numéros MIDI à noms (le premier dictionnaire retourné par `build_note_dictionaries`).
+
+Avec la librairie Mido, on peut assigner une fonction de rappel pour traiter les messages quand ils arrivent. Les callback de messages doivent être des fonctions (ou des objets fonctionnels) qui prennent en paramètre un message MIDI. On peut obtenir le type d'un message ([documentation](https://mido.readthedocs.io/en/latest/message_types.html)) via son `.type`. Si le type est `note_on`, on peut obtenir sa vitesse (le volume de la note) via son `.velocity`. On considère qu'une note est appuyées quand on a un message de type `note_on` avec une vitesse supérieure à 0. Une note est relâchée quand on a un `note_off` ou un `note_on` avec une vitesse de 0 (certains claviers envoient un `note_on` de volume 0 au lieu d'un `note_off`).
+
+Voir exemple ci-dessous pour ouverture d'un port MIDI et enregistrement d'un callback.
 
 Exemple :
 ```python
-print(get_fibonacci_sequence(1))
-print(get_fibonacci_sequence(2))
-print(get_fibonacci_sequence(10))
+midi_to_name, name_to_midi = build_note_dictionaries(solfeggio_names, True)
+print_note_name = build_print_note_name_callback(midi_to_name)
+keyboard = mido.open_input("UnPortMIDI 0", callback=print_note_name)
+# Maintenant les notes vont s'afficher
+
+input("Affichage des noms de notes (Appuyez sur ENTER pour passer à l'étape suivante)..." "\n")
 ```
-Résultat :
+Résultat si on fait une gamme de do majeur dans l'octave 4 :
 ```
-[0]
-[0, 1]
-[0, 1, 1, 2, 3, 5, 8, 13, 21, 34]
+Affichage des noms de notes (Appuyez sur ENTER pour passer à l'étape suivante)...
+Do4
+Ré4
+Mi4
+Fa4
+Sol4
+La4
+Si4
+Do5
 ```
 
-## 3. Trier un dictionnaire par les décimales des valeurs
-### `get_sorted_dict_by_decimals`
+## 3. Afficher les noms d'accords
+### `build_print_chord_name_callback`
 
-Écrivez une fonction qui retourne un dictionnaire trié en ordre croissant de la partie décimales des valeurs. Par partie décimale, on veut dire que par exemple 0.9 est plus grand que 0.42, donc tout simplement une comparaison avec la partie entière enlevée.
-
-Faites le tout sur une seule ligne en utilisant la fonction `sorted` de Python.
+Écrivez une fonction qui retourne une fonction qui sert callback et qui affiche le nom des accords qui sont joués. On affiche seulement quand seulement les notes de l'accord sont appuyées, pas relâchées, et on ne s'occuppe pas des arpèges. On passe en paramètre à `build_print_chord_name_callback` un dictionnaire d'associations notes et de nom d'accords suivi d'un dictionnaire de noms à numéro MIDI (le deuxième dictionnaire retourné par `build_note_dictionaries`.
 
 Exemple :
 ```python
-spam = {
-	2: 2.1,
-	3: 3.3,
-	1: 1.4,
-	4: 4.2
+chord_names = {
+    "Do majeur" : ("Do", "Mi", "Sol"),
+    "Fa majeur" : ("Fa", "La", "Do"),
+    "Sol majeur" : ("Sol", "Si", "Ré"),
 }
-eggs = {
-	"foo": 42.6942,
-	"bar": 42.9000,
-	"qux": 69.4269,
-	"yeet": 420.1337
-}
-print(get_sorted_dict_by_decimals(spam))
-print(get_sorted_dict_by_decimals(eggs))
-```
-Résultat :
-```
-{2: 2.1, 4: 4.2, 3: 3.3, 1: 1.4}
-{'yeet': 420.1337, 'qux': 69.4269, 'foo': 42.6942, 'bar': 42.9}
-```
+midi_to_name, name_to_midi = build_note_dictionaries(solfeggio_names, False)
+print_chord_name = build_print_chord_name_callback(chord_names, name_to_midi)
+keyboard = mido.open_input("UnPortMIDI 0", callback=print_chord_name)
 
-## 4. Nombres de Fibonacci (générateur)
-### `fibonacci_numbers`
-
-Créez une fonction génératrice (un générateur) de nombres de Fibonacci. Contrairement au numéro 2, vous ne devez pas retourner une liste de la séquence au complet, mais plutôt générer les nombres à mesure à l'aide de `yield`. Vous ne devez pas garder en mémoire toute la série, mais seulement les éléments nécessaires, donc les deux derniers à tout moment.
-
-Exemple :
-```python
-for fibo_num in fibonacci_numbers(10):
-    print(fibo_num, end=" ")
+input("Affichage des noms d'accords (Appuyez sur ENTER pour passer à l'étape suivante)..." "\n")
 ```
-Résultat :
+Résultat si on joue IV-V-I en do majeur :
 ```
-0 1 1 2 3 5 8 13 21 34 
+Affichage des noms d'accords (Appuyez sur ENTER pour passer à l'étape suivante)...
+Fa majeur
+Sol majeur
+Do majeur
 ```
-
-## 5. Générateur de séries récursives génériques
-### `build_recursive_sequence_generator`
-
-Écrivez une fonction qui retourne un générateur de nombres à l'aide d'une définition récursive et qui s'utilise de la même façon que le `fibonacci_numbers` du numéro précédent. La fonction prend en paramètre les valeurs initiales de la suite sous forme de liste, une fonction qui représente la définition récursive de la série et un booléen disant si toute la séquence doit être gardée en mémoire (`False` par défaut). Cette fonction prend en paramètre la liste des derniers éléments de la série.
-
-Par exemple pour créer le générateur de Fibonacci, on devrait faire :
-```python
-def fibo_def(last_elems):
-    return last_elems[-1] + last_elems[-2]
-fibo = build_recursive_sequence_generator([0, 1], fibo_def)
-for fi in fibo(10):
-    print(fi, end=" ")
-```
-Résultat :
-```
-0 1 1 2 3 5 8 13 21 34 
-```
-
-## 6. Créer des générateurs
-
-À l'aide de la fonction du numéro 5, créer des générateurs pour les séries de Lucas, de Perrin et de Hofstadter-Q. Faites chaque création de générateur sur une seule ligne en utilisant des lambda comme deuxième paramètre.
-
-Définition de Lucas : https://en.wikipedia.org/wiki/Lucas_number#Definition <br>
-Définition de Perrin : https://en.wikipedia.org/wiki/Perrin_number <br>
-Définition de Hofstadter-Q : https://en.wikipedia.org/wiki/Hofstadter_sequence#Hofstadter_Q_sequence
-
-Exemple:
-```python
-lucas = build_recursive_sequence_generator(TODO)
-print(f"Lucas : {[elem for elem in lucas(10)]}")
-perrin = build_recursive_sequence_generator(TODO)
-print(f"Perrin : {[elem for elem in perrin(10)]}")
-hofstadter_q = build_recursive_sequence_generator(TODO)
-print(f"Hofstadter-Q : {[elem for elem in hofstadter_q(10)]}")
-```
-Résultat :
-```
-Lucas : [2, 1, 3, 4, 7, 11, 18, 29, 47, 76]
-Perrin : [3, 0, 2, 3, 2, 5, 5, 7, 10, 12]
-Hofstadter-Q : [1, 1, 2, 3, 3, 4, 5, 5, 6, 6]
-```
-
